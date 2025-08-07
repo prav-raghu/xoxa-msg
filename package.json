@@ -1,15 +1,47 @@
 {
   "name": "xoxa-msg",
   "version": "1.0.0",
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist"
-  },
+  "type": "module",
   "author": "prav-raghu",
   "license": "MIT",
-  "description": "A messaging library for Xoxa",
+  "description": "A messaging library for Xoxa that supports SMS, WhatsApp, and Telegram transports.",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "prepublishOnly": "npm run build"
+  },
   "devDependencies": {
-    "@types/node": "^24.2.0"
-  }
+    "@types/node": "^24.2.0",
+    "typescript": "^5.3.0",
+    "rimraf": "^3.0.2"
+  },
+  "keywords": [
+    "sms",
+    "whatsapp",
+    "telegram",
+    "messaging",
+    "xoxa",
+    "twilio",
+    "meta",
+    "bot",
+    "communication",
+    "chat-api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prav-raghu/xoxa-msg.git"
+  },
+  "bugs": {
+    "url": "https://github.com/prav-raghu/xoxa-msg/issues"
+  },
+  "homepage": "https://github.com/prav-raghu/xoxa-msg#readme"
 }
