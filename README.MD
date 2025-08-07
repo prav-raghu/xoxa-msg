@@ -48,7 +48,7 @@ src/
 
 ## 🧑‍💻 Example Usage
 
-SMS Via Twilio
+### SMS (Via Twilio)
 ```ts
 // tested on an isolated index.ts file
 import { TwilioSmsTransport, XoxaClient } from "xoxa-msg";
