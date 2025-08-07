@@ -48,6 +48,35 @@ src/
 
 ## 🧑‍💻 Example Usage
 
+SMS Via Twilio
+```ts
+// tested on an isolated index.ts file
+import { TwilioSmsTransport, XoxaClient } from "xoxa-msg";
+import * as dotenv from "dotenv";
+dotenv.config();
+(async () => {
+  const client = new XoxaClient({ appId: "xoxa-app", debug: true });
+  client.registerTransport(
+    new TwilioSmsTransport({
+      accountSid: process.env.TWILIO_SID!,
+      authToken: process.env.TWILIO_TOKEN!,
+    })
+  );
+
+  await client.connect();
+
+  await client.send({
+    channel: "sms",
+    to: "+00000000000",
+    body: "Hello from Durban! 🇿🇦",
+    from: "+00000000001",
+  });
+
+  await client.disconnect();
+})();
+
+```
+
 ```ts
 import { XoxaClient, TwilioSmsTransport, WhatsAppTransport, TelegramTransport } from "xoxa-msg";
 
