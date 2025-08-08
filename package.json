@@ -1,6 +1,6 @@
 {
   "name": "xoxa-msg",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "author": "prav-raghu",
   "license": "MIT",
   "description": "A messaging library for Xoxa that supports SMS, WhatsApp, and Telegram transports.",
