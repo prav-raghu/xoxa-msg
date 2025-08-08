@@ -1,26 +1,45 @@
-name: Release
-
+name: Build & Release
+description: Automatically build and release the project
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+    issues: write
+    pull-requests: write
+
+# Avoid two releases racing each other
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run semantic-release
+    release:
+        runs-on: ubuntu-latest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+            CI: true
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  persist-credentials: false # use semantic-release's auth, not checkout's
+                  fetch-depth: 0 # needed so tags/history are available
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
+                  cache-dependency-path: package-lock.json
+
+            - name: Install dependencies
+              run: npm ci --ignore-scripts
+
+            - name: Run semantic-release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # auto-provided; write perms come from the 'permissions:' block
+                  # NPM_TOKEN: ${{ secrets.NPM_TOKEN }}       # uncomment if publishing to npm
+              run: npx semantic-release
