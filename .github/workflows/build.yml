@@ -1,4 +1,5 @@
-name: Release
+name: Build & Release
+description: Automatically build and release the project
 
 on:
   push:
