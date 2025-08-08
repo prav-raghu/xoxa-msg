@@ -14,12 +14,12 @@ A TypeScript-first, multi-platform messaging SDK for **SMS**, **WhatsApp**, and 
 
 Supports:
 
-- Media attachments
-- Typed delivery receipts
-- Retry with exponential backoff
-- Full OOP and TypeScript typing
-- Pluggable transports
-- Form encoding support for Twilio
+-   Media attachments
+-   Typed delivery receipts
+-   Retry with exponential backoff
+-   Full OOP and TypeScript typing
+-   Pluggable transports
+-   Form encoding support for Twilio
 
 ---
 
@@ -48,64 +48,96 @@ src/
 
 ## 🧑‍💻 Example Usage
 
+### SMS (Via Twilio)
+
 ```ts
-import { XoxaClient, TwilioSmsTransport, WhatsAppTransport, TelegramTransport } from "xoxa-msg";
+// tested on an isolated index.ts file
+import { TwilioSmsTransport, XoxaClient } from "xoxa-msg";
+import * as dotenv from "dotenv";
+dotenv.config();
+(async () => {
+    const client = new XoxaClient({ appId: "xoxa-app", debug: true });
+    client.registerTransport(
+        new TwilioSmsTransport({
+            accountSid: process.env.TWILIO_SID!,
+            authToken: process.env.TWILIO_TOKEN!,
+        }),
+    );
 
-const client = new XoxaClient({ appId: "xoxa-app", debug: true });
+    await client.connect();
 
-// Register SMS (Twilio)
-client.registerTransport(
-    new TwilioSmsTransport({
-        accountSid: process.env.TWILIO_SID!,
-        authToken: process.env.TWILIO_TOKEN!,
-        from: process.env.TWILIO_FROM!,
-    }),
-);
+    await client.send({
+        channel: "sms",
+        to: "+00000000000",
+        body: "Hello from Durban! 🇿🇦",
+        from: "+00000000001",
+    });
 
-// Register WhatsApp (Meta)
-client.registerTransport(
-    new WhatsAppTransport({
-        accessToken: process.env.WHATSAPP_TOKEN!,
-        phoneNumberId: process.env.WHATSAPP_NUMBER_ID!,
-    }),
-);
+    await client.disconnect();
+})();
 
-// Register Telegram
-client.registerTransport(
-    new TelegramTransport({
-        botToken: process.env.TELEGRAM_BOT_TOKEN!,
-    }),
-);
+```
 
-await client.connect();
+### Whatsapp (Via Meta)
 
-// Send SMS
-await client.send({
-    channel: "sms",
-    to: "+2783XXXXXXX",
-    body: "Hello from Durban! 🇿🇦",
-});
+````ts
+// tested on an isolated index.ts file
+import { WhatsAppTransport, XoxaClient } from "xoxa-msg";
+import * as dotenv from "dotenv";
+dotenv.config();
+(async () => {
+  const client = new XoxaClient({ appId: "xoxa-app", debug: true });
+  client.registerTransport(
+      new WhatsAppTransport({
+          accessToken: process.env.WHATSAPP_TOKEN!,
+          phoneNumberId: process.env.WHATSAPP_NUMBER_ID!,
+      }),
+  );
 
-// Send WhatsApp with image
-await client.send({
-    channel: "whatsapp",
-    to: "+2783XXXXXXX",
-    body: "Check this out!",
-    media: [
-        {
-            kind: "image",
-            url: "https://example.com/dog.jpg",
-            caption: "Here’s my dog 🐶",
-        },
-    ],
-});
+  await client.connect();
 
-// Send Telegram text
-await client.send({
+  await client.send({
+      channel: "whatsapp",
+      to: "+2783XXXXXXX",
+      body: "Check this out!",
+      media: [
+          {
+              kind: "image",
+              url: "https://example.com/dog.jpg",
+              caption: "Here’s my dog 🐶",
+          },
+      ],
+  });
+
+  await client.disconnect();
+})();
+
+````
+
+### Telegram (Via Telegram Bot)
+
+````ts
+// tested on an isolated index.ts file
+import { TelegramTransport, XoxaClient } from "xoxa-msg";
+import * as dotenv from "dotenv";
+dotenv.config();
+(async () => {
+  const client = new XoxaClient({ appId: "xoxa-app", debug: true });
+  client.registerTransport(
+      new TelegramTransport({
+          botToken: process.env.TELEGRAM_BOT_TOKEN!,
+      }),
+  );
+  
+  await client.connect();
+
+  await client.send({
     channel: "telegram",
     to: "123456789",
     body: "Yo, from xoxa!",
-});
+  });
 
-await client.disconnect();
-```
+  await client.disconnect();
+})();
+
+````

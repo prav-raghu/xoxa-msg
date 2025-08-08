@@ -27,7 +27,6 @@ export interface XoxaConfig {
 export interface TwilioSmsConfig {
     accountSid: string;
     authToken: string;
-    from: string;
     baseUrl?: string;
 }
 
