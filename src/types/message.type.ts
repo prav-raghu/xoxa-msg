@@ -10,7 +10,10 @@ export interface MediaAttachment {
     mimeType?: string; // strongly recommended for docs/video/audio
 }
 
-export interface OutboundMessage {
+/**
+ * Base message fields shared by all channels.
+ */
+export interface BaseOutboundMessage {
     from?: string;
     channel: Channel;
     to: string; // E.164 for SMS/WhatsApp, chat id/username for Telegram
@@ -21,6 +24,45 @@ export interface OutboundMessage {
     dedupeKey?: string; // idempotency key (if supported by transport)
     createdAt?: ISODateString;
 }
+
+/**
+ * WhatsApp-specific message types
+ */
+export interface WhatsAppTextMessage extends BaseOutboundMessage {
+    channel: "whatsapp";
+    body: string;
+    previewUrl?: boolean;
+}
+
+export interface WhatsAppTemplateComponent {
+    type: string;
+    parameters: Array<{ type: string; text: string }>;
+}
+
+export interface WhatsAppTemplateMessage extends BaseOutboundMessage {
+    channel: "whatsapp";
+    templateName: string;
+    languageCode?: string;
+    components?: WhatsAppTemplateComponent[];
+}
+
+export interface WhatsAppMediaMessage extends BaseOutboundMessage {
+    channel: "whatsapp";
+    media: MediaAttachment[]; // 1..n
+}
+
+/**
+ * Union of all possible WhatsApp outbound messages
+ */
+export type WhatsAppOutboundMessage = WhatsAppTextMessage | WhatsAppTemplateMessage | WhatsAppMediaMessage;
+
+/**
+ * Generic outbound message union for all channels
+ */
+export type OutboundMessage =
+    | WhatsAppOutboundMessage
+    | (BaseOutboundMessage & { channel: "sms"; body: string })
+    | (BaseOutboundMessage & { channel: "telegram"; body: string });
 
 export interface InboundMessage {
     channel?: Channel;
@@ -50,3 +92,30 @@ export interface SendOptions {
     timeoutMs?: number;
     retries?: number;
 }
+
+/**
+ * WhatsApp API payload shape
+ */
+export type WhatsAppPayload =
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "text";
+          text: { body: string; preview_url?: boolean };
+      }
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "template";
+          template: {
+              name: string;
+              language: { code: string };
+              components?: WhatsAppTemplateComponent[];
+          };
+      }
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "image" | "audio" | "video" | "document";
+          [key: string]: unknown;
+      };

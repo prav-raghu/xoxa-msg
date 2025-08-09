@@ -1,11 +1,19 @@
 import type { RequiredTransportConfig, XoxaConfig, Unsubscribe, TransportState, ISODateString, WaResp } from "../types/global.type";
-import type { OutboundMessage, InboundMessage, DeliveryReceipt } from "../types/message.type";
+import type {
+    InboundMessage,
+    DeliveryReceipt,
+    WhatsAppMediaMessage,
+    WhatsAppTemplateMessage,
+    WhatsAppTextMessage,
+    WhatsAppPayload,
+    WhatsAppOutboundMessage,
+} from "../types/message.type";
 import type { Transport } from "../interfaces/transport.interface";
 import { HttpClient } from "../utilities/http-client";
 
 export interface WhatsAppCloudConfig {
     phoneNumberId: string;
-    baseUrl?: string; // e.g., https://graph.facebook.com/v19.0
+    baseUrl?: string; // e.g., https://graph.facebook.com/v22.0
     accessToken: string;
 }
 
@@ -43,11 +51,12 @@ export class WhatsAppTransport implements Transport {
         return this.state;
     }
 
-    public async send(message: OutboundMessage, cfg: RequiredTransportConfig): Promise<DeliveryReceipt> {
-        if (this.state !== "connected") throw new Error("WhatsAppTransport not connected");
+    public async send(message: WhatsAppOutboundMessage, cfg: RequiredTransportConfig): Promise<DeliveryReceipt> {
+        if (this.state !== "connected") {
+            throw new Error("WhatsAppTransport not connected");
+        }
 
-        const urlBase = this.cfg.baseUrl ?? `https://graph.facebook.com/v22.0/${this.cfg.phoneNumberId}/messages`;
-        const url = `${urlBase}`;
+        const url = `${this.cfg.baseUrl ?? "https://graph.facebook.com/v22.0"}/${this.cfg.phoneNumberId}/messages`;
 
         const headers = {
             ...cfg.headers,
@@ -55,6 +64,7 @@ export class WhatsAppTransport implements Transport {
         };
 
         const payload = this.buildWhatsAppPayload(message);
+
         const res = await this.http.postJson<WaResp>(url, payload, headers);
         const id = res.messages?.[0]?.id ?? `wa_${Date.now()}`;
 
@@ -68,35 +78,53 @@ export class WhatsAppTransport implements Transport {
         };
     }
 
-    private buildWhatsAppPayload(msg: OutboundMessage) {
-        if (msg.media?.length) {
-            const m = msg.media[0];
-            let type: string;
-            if (m.kind === "image") {
-                type = "image";
-            } else if (m.kind === "audio") {
-                type = "audio";
-            } else if (m.kind === "video") {
-                type = "video";
-            } else {
-                type = "document";
+    private buildWhatsAppPayload(msg: WhatsAppOutboundMessage): WhatsAppPayload {
+        // Media message
+        if ("media" in msg && msg.media && msg.media.length > 0) {
+            const m: WhatsAppMediaMessage["media"][0] = msg.media[0];
+            const type = m.kind;
+            const mediaPayload: Record<string, unknown> = { link: m.url };
+
+            if (m.caption || msg.body) {
+                mediaPayload.caption = m.caption ?? msg.body;
             }
+            if (m.filename) {
+                mediaPayload.filename = m.filename;
+            }
+
             return {
                 messaging_product: "whatsapp",
                 to: msg.to.replace(/\D/g, ""),
                 type,
-                [type]: {
-                    link: m.url,
-                    caption: m.caption ?? msg.body,
-                    filename: m.filename,
+                [type]: mediaPayload,
+            };
+        }
+
+        // Template message
+        if ("templateName" in msg) {
+            const tmplMsg = msg as WhatsAppTemplateMessage;
+            return {
+                messaging_product: "whatsapp",
+                to: tmplMsg.to.replace(/\D/g, ""),
+                type: "template",
+                template: {
+                    name: tmplMsg.templateName,
+                    language: { code: tmplMsg.languageCode ?? "en_US" },
+                    ...(tmplMsg.components ? { components: tmplMsg.components } : {}),
                 },
             };
         }
+
+        // Text message
+        const txtMsg = msg as WhatsAppTextMessage;
         return {
             messaging_product: "whatsapp",
-            to: msg.to.replace(/\D/g, ""),
+            to: txtMsg.to.replace(/\D/g, ""),
             type: "text",
-            text: { body: msg.body ?? "" },
+            text: {
+                body: txtMsg.body,
+                ...(txtMsg.previewUrl !== undefined ? { preview_url: txtMsg.previewUrl } : {}),
+            },
         };
     }
 }
