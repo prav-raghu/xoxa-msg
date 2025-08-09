@@ -11,7 +11,7 @@ export interface MediaAttachment {
 }
 
 export interface OutboundMessage {
-    from: string;
+    from?: string;
     channel: Channel;
     to: string; // E.164 for SMS/WhatsApp, chat id/username for Telegram
     body?: string;

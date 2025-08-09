@@ -52,7 +52,7 @@ export class TwilioSmsTransport implements Transport {
         const auth = Buffer.from(`${this.cfg.accountSid}:${this.cfg.authToken}`).toString("base64");
         const headers = { ...cfg.headers, Authorization: `Basic ${auth}` };
         const form = new URLSearchParams();
-        form.append("From", message.from);
+        form.append("From", message.from!);
         form.append("To", message.to);
         if (message.body) form.append("Body", message.body);
         if (message.media && message.media.length > 0) {

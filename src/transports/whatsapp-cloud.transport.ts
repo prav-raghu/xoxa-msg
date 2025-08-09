@@ -6,6 +6,7 @@ import { HttpClient } from "../utilities/http-client";
 export interface WhatsAppCloudConfig {
     phoneNumberId: string;
     baseUrl?: string; // e.g., https://graph.facebook.com/v19.0
+    accessToken: string;
 }
 
 export class WhatsAppTransport implements Transport {
@@ -45,13 +46,12 @@ export class WhatsAppTransport implements Transport {
     public async send(message: OutboundMessage, cfg: RequiredTransportConfig): Promise<DeliveryReceipt> {
         if (this.state !== "connected") throw new Error("WhatsAppTransport not connected");
 
-        const urlBase = this.cfg.baseUrl ?? "https://graph.facebook.com/v22.0//messages";
-        // const url = `${urlBase}/${this.cfg.phoneNumberId}/messages`;
+        const urlBase = this.cfg.baseUrl ?? `https://graph.facebook.com/v22.0/${this.cfg.phoneNumberId}/messages`;
         const url = `${urlBase}`;
 
         const headers = {
             ...cfg.headers,
-            Authorization: `Bearer ${this.cfg.phoneNumberId}`,
+            Authorization: `Bearer ${this.cfg.accessToken}`,
         };
 
         const payload = this.buildWhatsAppPayload(message);
