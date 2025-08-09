@@ -16,6 +16,7 @@ import { Validator } from "../utilities/validation.utility";
 import { BackOffStrategy } from "../strategies/back-off-strategy";
 import { TypedEvents } from "../events/typed-events";
 import { DEFAULTS } from "../configs/constants";
+import { WhatsAppTemplateMessage } from "../types/whatsapp.type";
 
 export class XoxaClient {
     private readonly transports: Map<OutboundMessage["channel"], Transport> = new Map();
@@ -52,7 +53,7 @@ export class XoxaClient {
         this.events.emit("disconnected", { reason });
     }
 
-    public async send(message: OutboundMessage, options?: SendOptions): Promise<DeliveryReceipt> {
+    public async send(message: OutboundMessage | WhatsAppTemplateMessage, options?: SendOptions): Promise<DeliveryReceipt> {
         Validator.outbound(message);
         const transport = this.transports.get(message.channel);
         if (!transport) throw new Error(`No transport registered for channel "${message.channel}"`);
