@@ -1,7 +1,7 @@
 export interface WhatsAppRequestDto {
     messaging_product: string;
     to: string;
-    type: "text" | "template";
+    type: "text" | "template" | "image" | "audio" | "video" | "document";
     template?: {
         name: string;
         language: {

@@ -23,5 +23,5 @@ export { noopLogger } from "./utilities/logger";
 
 // Transports (optional exports)
 export { TwilioSmsTransport } from "./transports/twilio-sms.transport";
-// export { WhatsAppTransport } from "./transports/whatsapp-cloud.transport";
+export { WhatsAppTransport } from "./transports/whatsapp-cloud.transport";
 export { TelegramTransport } from "./transports/telegram-bot.transport";

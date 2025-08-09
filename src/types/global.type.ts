@@ -50,36 +50,6 @@ export interface MediaAttachment {
     mimeType?: string;
 }
 
-export interface WhatsAppTextMessage extends OutboundMessage {
-    channel: "whatsapp";
-    body: string;
-    previewUrl?: boolean;
-}
-
-export interface WhatsAppTemplateComponent {
-    type: string;
-    parameters: Array<{ type: string; text: string }>;
-}
-
-export interface WhatsAppTemplateMessage extends OutboundMessage {
-    channel: "whatsapp";
-    templateName: string;
-    languageCode?: string;
-    components?: WhatsAppTemplateComponent[];
-}
-
-export interface WhatsAppMediaMessage extends OutboundMessage {
-    channel: "whatsapp";
-    media: MediaAttachment[];
-}
-
-export type WhatsAppOutboundMessage = WhatsAppTextMessage | WhatsAppTemplateMessage | WhatsAppMediaMessage;
-
-export type BaseOutboundMessage =
-    | WhatsAppOutboundMessage
-    | (OutboundMessage & { channel: "sms"; body: string })
-    | (OutboundMessage & { channel: "telegram"; body: string });
-
 export interface InboundMessage {
     channel?: Channel;
     id: string;
@@ -108,30 +78,6 @@ export interface SendOptions {
     timeoutMs?: number;
     retries?: number;
 }
-
-export type WhatsAppPayload =
-    | {
-          messaging_product: "whatsapp";
-          to: string;
-          type: "text";
-          text: { body: string; preview_url?: boolean };
-      }
-    | {
-          messaging_product: "whatsapp";
-          to: string;
-          type: "template";
-          template: {
-              name: string;
-              language: { code: string };
-              components?: WhatsAppTemplateComponent[];
-          };
-      }
-    | {
-          messaging_product: "whatsapp";
-          to: string;
-          type: "image" | "audio" | "video" | "document";
-          [key: string]: unknown;
-      };
 
 export interface OutboundMessage {
     from?: string;
