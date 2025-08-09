@@ -1,12 +1,21 @@
-import type { XoxaConfig, RequiredTransportConfig, TransportState, Unsubscribe, ISODateString, XoxaEvents } from "../types/global.type";
-import type { InboundMessage, DeliveryReceipt, SendOptions, OutboundMessage } from "../types/message.type";
+import type {
+    XoxaConfig,
+    RequiredTransportConfig,
+    TransportState,
+    Unsubscribe,
+    XoxaEvents,
+    DeliveryReceipt,
+    InboundMessage,
+    OutboundMessage,
+    SendOptions,
+} from "../types/global.type";
 import type { Transport } from "../interfaces/transport.interface";
 import type { Logger } from "../interfaces/logger.interface";
 import { noopLogger } from "../utilities/logger";
-import { Validator } from "../utilities/validator";
+import { Validator } from "../utilities/validation.utility";
 import { BackOffStrategy } from "./back-off-strategy";
-import { TypedEvents } from "./typed-events";
-import { DEFAULTS } from "../constants/constants";
+import { TypedEvents } from "../events/typed-events";
+import { DEFAULTS } from "../configs/constants";
 
 export class XoxaClient {
     private readonly transports: Map<OutboundMessage["channel"], Transport> = new Map();
@@ -41,15 +50,13 @@ export class XoxaClient {
             await t.disconnect();
         }
         this.events.emit("disconnected", { reason });
-        // Note: We intentionally do not clear subscribers to keep the instance reusable.
     }
 
     public async send(message: OutboundMessage, options?: SendOptions): Promise<DeliveryReceipt> {
         Validator.outbound(message);
         const transport = this.transports.get(message.channel);
         if (!transport) throw new Error(`No transport registered for channel "${message.channel}"`);
-
-        const cfg: RequiredTransportConfig = {
+        const config: RequiredTransportConfig = {
             timeoutMs: options?.timeoutMs ?? this.config.timeoutMs ?? DEFAULTS.TIMEOUT_MS,
             userAgent: this.config.userAgent ?? DEFAULTS.USER_AGENT,
             headers: {
@@ -58,17 +65,15 @@ export class XoxaClient {
                 ...(message.dedupeKey ? { "Idempotency-Key": message.dedupeKey } : {}),
             },
         };
-
         const retries = options?.retries ?? this.config.maxRetries ?? DEFAULTS.MAX_RETRIES;
         let attempt = 0;
-
         while (true) {
             try {
                 const normalized: OutboundMessage = {
                     ...message,
-                    createdAt: message.createdAt ?? (new Date().toISOString() as ISODateString),
+                    createdAt: message.createdAt ?? new Date().toISOString(),
                 };
-                return await transport.send(normalized, cfg);
+                return await transport.send(normalized, config);
             } catch (err) {
                 attempt += 1;
                 const e = err instanceof Error ? err : new Error(String(err));

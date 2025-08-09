@@ -1,6 +1,4 @@
-import { InboundMessage } from "./message.type";
-
-export type ISODateString = `${number}-${number}-${number}T${number}:${number}:${number}${string}`;
+export type MediaKind = "image" | "audio" | "video" | "document";
 export type Unsubscribe = () => void;
 export type TransportState = "idle" | "connecting" | "connected" | "closing" | "closed" | "error";
 export type Channel = "sms" | "whatsapp" | "telegram";
@@ -28,6 +26,7 @@ export interface TwilioSmsConfig {
     accountSid: string;
     authToken: string;
     baseUrl?: string;
+    from?: string;
 }
 
 export interface RequiredTransportConfig {
@@ -40,4 +39,116 @@ export interface RequiredTransportConfig {
 export interface TelegramConfig {
     botToken: string;
     baseUrl?: string;
+}
+
+export interface MediaAttachment {
+    kind: MediaKind;
+    url: string; // remote media URL
+    filename?: string; // provider-dependent
+    caption?: string; // optional text
+    mimeType?: string; // strongly recommended for docs/video/audio
+}
+
+export interface WhatsAppTextMessage extends OutboundMessage {
+    channel: "whatsapp";
+    body: string;
+    previewUrl?: boolean;
+}
+
+export interface WhatsAppTemplateComponent {
+    type: string;
+    parameters: Array<{ type: string; text: string }>;
+}
+
+export interface WhatsAppTemplateMessage extends OutboundMessage {
+    channel: "whatsapp";
+    templateName: string;
+    languageCode?: string;
+    components?: WhatsAppTemplateComponent[];
+}
+
+export interface WhatsAppMediaMessage extends OutboundMessage {
+    channel: "whatsapp";
+    media: MediaAttachment[]; // 1..n
+}
+
+/**
+ * Union of all possible WhatsApp outbound messages
+ */
+export type WhatsAppOutboundMessage = WhatsAppTextMessage | WhatsAppTemplateMessage | WhatsAppMediaMessage;
+
+/**
+ * Generic outbound message union for all channels
+ */
+export type BaseOutboundMessage =
+    | WhatsAppOutboundMessage
+    | (OutboundMessage & { channel: "sms"; body: string })
+    | (OutboundMessage & { channel: "telegram"; body: string });
+
+export interface InboundMessage {
+    channel?: Channel;
+    id: string;
+    from: string;
+    to: string;
+    body?: string;
+    media?: MediaAttachment[];
+    metadata?: Record<string, string | number | boolean>;
+    receivedAt: string;
+    subject?: string;
+}
+
+export type DeliveryStatus = "queued" | "sent" | "delivered" | "failed" | "unknown";
+
+export interface DeliveryReceipt {
+    channel?: Channel;
+    messageId: string;
+    status: DeliveryStatus;
+    detail?: string;
+    timestamp: string;
+    providerMessageId?: string;
+    raw?: unknown; // provider raw payload (typed by transport)
+}
+
+export interface SendOptions {
+    timeoutMs?: number;
+    retries?: number;
+}
+
+/**
+ * WhatsApp API payload shape
+ */
+export type WhatsAppPayload =
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "text";
+          text: { body: string; preview_url?: boolean };
+      }
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "template";
+          template: {
+              name: string;
+              language: { code: string };
+              components?: WhatsAppTemplateComponent[];
+          };
+      }
+    | {
+          messaging_product: "whatsapp";
+          to: string;
+          type: "image" | "audio" | "video" | "document";
+          [key: string]: unknown;
+      };
+
+export interface OutboundMessage {
+    from?: string;
+    channel: Channel;
+    to: string;
+    body?: string;
+    media?: MediaAttachment[];
+    subject?: string;
+    metadata?: Record<string, string | number | boolean>;
+    dedupeKey?: string;
+    createdAt?: string;
 }

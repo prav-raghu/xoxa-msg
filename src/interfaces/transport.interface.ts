@@ -1,5 +1,4 @@
-import type { XoxaConfig, RequiredTransportConfig, Unsubscribe, TransportState } from "../types/global.type";
-import type { OutboundMessage, InboundMessage, DeliveryReceipt } from "../types/message.type.ts";
+import type { XoxaConfig, RequiredTransportConfig, Unsubscribe, TransportState, OutboundMessage, DeliveryReceipt, InboundMessage } from "../types/global.type";
 
 export interface Transport {
     /** Channel this transport supports, e.g., 'sms' | 'whatsapp' | 'telegram' */
