@@ -1,6 +1,6 @@
-import { CHANNELS } from "../constants/constants";
+import { CHANNELS } from "../configs/constants";
 import { XoxaValidationError } from "../core/xoxa-error";
-import { OutboundMessage } from "../types/message.type";
+import { OutboundMessage } from "../types/global.type";
 
 export class Validator {
     public static outbound(msg: OutboundMessage): void {

@@ -1,7 +1,7 @@
 // Core
 export { XoxaClient } from "./core/xoxa-client";
-export { BackOffStrategy } from "./core/back-off-strategy";
-export { TypedEvents } from "./core/typed-events";
+export { BackOffStrategy } from "./strategies/back-off-strategy";
+export { TypedEvents } from "./events/typed-events";
 
 // Errors
 export {
@@ -13,16 +13,12 @@ export {
     XoxaUnsupportedFeatureError,
 } from "./core/xoxa-error";
 
-// Types
-export type { XoxaConfig, RequiredTransportConfig, TransportState, Unsubscribe, ISODateString, Channel } from "./types/global.type";
-export type { MediaAttachment, OutboundMessage, InboundMessage, DeliveryReceipt, DeliveryStatus, SendOptions } from "./types/message.type";
-
 // Interfaces
 export type { Transport } from "./interfaces/transport.interface";
 export type { Logger } from "./interfaces/logger.interface";
 
 // Utilities
-export { Validator } from "./utilities/validator";
+export { Validator } from "./utilities/validation.utility";
 export { noopLogger } from "./utilities/logger";
 
 // Transports (optional exports)

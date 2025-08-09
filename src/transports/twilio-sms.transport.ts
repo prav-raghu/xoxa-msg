@@ -3,29 +3,31 @@ import type {
     XoxaConfig,
     Unsubscribe,
     TransportState,
-    ISODateString,
-    TwilioSendResp,
     TwilioSmsConfig,
+    DeliveryReceipt,
+    InboundMessage,
+    OutboundMessage,
 } from "../types/global.type";
-import type { OutboundMessage, InboundMessage, DeliveryReceipt } from "../types/message.type";
 import type { Transport } from "../interfaces/transport.interface";
-import { FormClient } from "../utilities/form-client";
-import { Buffer } from "buffer";
+import type { TwilioRequestDto, TwilioResponseDto } from "../dtos/twilio.dto";
+import { Twilio } from "../apis/twilio.api";
 
 export class TwilioSmsTransport implements Transport {
     public readonly channel = "sms" as const;
     private state: TransportState = "idle";
     private onMsg: ((msg: InboundMessage) => void) | null = null;
-    private form!: FormClient;
-    private readonly cfg!: TwilioSmsConfig;
+    private readonly twilioSmsConfig!: TwilioSmsConfig;
+    private api!: Twilio;
 
-    constructor(cfg: TwilioSmsConfig) {
-        this.cfg = cfg;
+    constructor(_twilioSmsConfig: TwilioSmsConfig) {
+        this.twilioSmsConfig = _twilioSmsConfig;
     }
 
     public async connect(config: XoxaConfig): Promise<void> {
         this.state = "connecting";
-        this.form = new FormClient(config.timeoutMs ?? 15000);
+        this.api = new Twilio({
+            timeout: config.timeoutMs ?? 15000,
+        });
         this.state = "connected";
     }
 
@@ -46,35 +48,52 @@ export class TwilioSmsTransport implements Transport {
         return this.state;
     }
 
-    public async send(message: OutboundMessage, cfg: RequiredTransportConfig): Promise<DeliveryReceipt> {
-        if (this.state !== "connected") throw new Error("TwilioSmsTransport not connected");
-        const url = `${this.cfg.baseUrl ?? "https://api.twilio.com/2010-04-01"}/Accounts/${this.cfg.accountSid}/Messages.json`;
-        const auth = Buffer.from(`${this.cfg.accountSid}:${this.cfg.authToken}`).toString("base64");
-        const headers = { ...cfg.headers, Authorization: `Basic ${auth}` };
-        const form = new URLSearchParams();
-        form.append("From", message.from);
-        form.append("To", message.to);
-        if (message.body) form.append("Body", message.body);
-        if (message.media && message.media.length > 0) {
-            for (const m of message.media) {
-                if (m.url) form.append("MediaUrl", m.url);
-            }
-        }
-        const res = await this.form.postForm<TwilioSendResp>(url, form, headers);
-        return {
-            channel: "sms",
-            messageId: res.sid,
-            providerMessageId: res.sid,
-            status: this.mapTwilioStatus(res.status),
-            timestamp: new Date().toISOString() as ISODateString,
-            raw: res,
+    public async send(message: OutboundMessage, config: RequiredTransportConfig): Promise<DeliveryReceipt> {
+        if (this.state !== "connected") throw new Error("Twilio Sms Transport Layer is not connected");
+        const headers: Record<string, string> = {
+            ...config.headers,
         };
+        const model: TwilioRequestDto = {
+            from: message.from ?? this.twilioSmsConfig.from!,
+            to: message.to,
+            body: message.body!,
+            media: message.media?.map((m) => ({ url: m.url })) ?? undefined,
+        };
+        if (!model.from) throw new Error("TwilioSmsTransport: 'from' is required");
+        if (!model.to) throw new Error("TwilioSmsTransport: 'to' is required");
+        if (!model.body && (!model.media || model.media.length === 0)) {
+            throw new Error("TwilioSmsTransport: either 'body' or at least one media item is required");
+        }
+        try {
+            const resp = await this.api.sendTwilioSms(this.twilioSmsConfig.accountSid, this.twilioSmsConfig.authToken, model, headers);
+            const data: TwilioResponseDto = resp.data;
+            const id = data.sid ?? `tw_${Date.now()}`;
+            return {
+                channel: "sms",
+                messageId: id,
+                providerMessageId: id,
+                status: this.mapTwilioStatus(data.status),
+                timestamp: new Date().toISOString(),
+                raw: data,
+            };
+        } catch (exception) {
+            if (this.isAxiosErrorWithResponse<TwilioResponseDto>(exception)) {
+                const status = exception?.response?.status;
+                const data = exception?.response?.data;
+                const code = (data as any)?.code;
+                const message = (data as any)?.message ?? "Twilio API error";
+                throw new Error(`Twilio HTTP ${status} (code ${code ?? "?"}): ${message}`);
+            }
+            throw exception instanceof Error ? exception : new Error(String(exception));
+        }
     }
 
-    private mapTwilioStatus(s: string): "queued" | "sent" | "delivered" | "failed" | "unknown" {
-        switch (s) {
+    private mapTwilioStatus(status: string): "queued" | "sent" | "delivered" | "failed" | "unknown" {
+        switch (status) {
             case "queued":
                 return "queued";
+            case "accepted":
+            case "sending":
             case "sent":
                 return "sent";
             case "delivered":
@@ -85,5 +104,9 @@ export class TwilioSmsTransport implements Transport {
             default:
                 return "unknown";
         }
+    }
+
+    private isAxiosErrorWithResponse<T>(e: unknown): e is { response: { status: number; data: T } } {
+        return typeof e === "object" && e !== null && "response" in e && !!(e as any).response?.status;
     }
 }

@@ -1,6 +1,4 @@
-import { InboundMessage } from "./message.type";
-
-export type ISODateString = `${number}-${number}-${number}T${number}:${number}:${number}${string}`;
+export type MediaKind = "image" | "audio" | "video" | "document";
 export type Unsubscribe = () => void;
 export type TransportState = "idle" | "connecting" | "connected" | "closing" | "closed" | "error";
 export type Channel = "sms" | "whatsapp" | "telegram";
@@ -28,6 +26,13 @@ export interface TwilioSmsConfig {
     accountSid: string;
     authToken: string;
     baseUrl?: string;
+    from?: string;
+}
+
+export interface TelegramConfig {
+    botUsername?: string;
+    botToken: string;
+    baseUrl?: string;
 }
 
 export interface RequiredTransportConfig {
@@ -37,7 +42,51 @@ export interface RequiredTransportConfig {
     userAgent: string;
 }
 
-export interface TelegramConfig {
-    botToken: string;
-    baseUrl?: string;
+export interface MediaAttachment {
+    kind: MediaKind;
+    url: string;
+    filename?: string;
+    caption?: string;
+    mimeType?: string;
+}
+
+export interface InboundMessage {
+    channel?: Channel;
+    id: string;
+    from: string;
+    to: string;
+    body?: string;
+    media?: MediaAttachment[];
+    metadata?: Record<string, string | number | boolean>;
+    receivedAt: string;
+    subject?: string;
+}
+
+export type DeliveryStatus = "queued" | "sent" | "delivered" | "failed" | "unknown";
+
+export interface DeliveryReceipt {
+    channel?: Channel;
+    messageId: string;
+    status: DeliveryStatus;
+    detail?: string;
+    timestamp: string;
+    providerMessageId?: string;
+    raw?: unknown;
+}
+
+export interface SendOptions {
+    timeoutMs?: number;
+    retries?: number;
+}
+
+export interface OutboundMessage {
+    from?: string;
+    channel: Channel;
+    to: string;
+    body?: string;
+    media?: MediaAttachment[];
+    subject?: string;
+    metadata?: Record<string, string | number | boolean>;
+    dedupeKey?: string;
+    createdAt?: string;
 }

@@ -1,5 +1,12 @@
-import { Unsubscribe, TransportState, XoxaConfig, RequiredTransportConfig } from "../types/global.type";
-import { DeliveryReceipt, InboundMessage, OutboundMessage } from "../types/message.type";
+import {
+    Unsubscribe,
+    TransportState,
+    XoxaConfig,
+    RequiredTransportConfig,
+    DeliveryReceipt,
+    InboundMessage,
+    OutboundMessage,
+} from "../types/global.type";
 
 export interface Transport {
     connect(config: XoxaConfig): Promise<void>;

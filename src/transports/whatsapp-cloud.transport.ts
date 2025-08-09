@@ -1,28 +1,40 @@
-import type { RequiredTransportConfig, XoxaConfig, Unsubscribe, TransportState, ISODateString, WaResp } from "../types/global.type";
-import type { OutboundMessage, InboundMessage, DeliveryReceipt } from "../types/message.type";
+import {
+    TransportState,
+    InboundMessage,
+    XoxaConfig,
+    Unsubscribe,
+    RequiredTransportConfig,
+    DeliveryReceipt,
+    OutboundMessage,
+} from "../types/global.type";
 import type { Transport } from "../interfaces/transport.interface";
-import { HttpClient } from "../utilities/http-client";
+import { MetaApi } from "../apis/meta.api";
+import { WhatsAppOutboundMessage, WhatsAppMediaMessage, WhatsAppTextMessage } from "../types/whatsapp.type";
+import { WhatsAppRequestDto } from "../dtos/meta.dto";
 
 export interface WhatsAppCloudConfig {
-    accessToken: string;
     phoneNumberId: string;
-    baseUrl?: string; // e.g., https://graph.facebook.com/v19.0
+    baseUrl?: string;
+    accessToken: string;
 }
 
 export class WhatsAppTransport implements Transport {
     public readonly channel = "whatsapp" as const;
     private state: TransportState = "idle";
     private onMsg: ((msg: InboundMessage) => void) | null = null;
-    private http!: HttpClient;
-    private readonly cfg!: WhatsAppCloudConfig;
+    private api!: MetaApi;
+    private readonly config!: WhatsAppCloudConfig;
 
-    constructor(cfg: WhatsAppCloudConfig) {
-        this.cfg = cfg;
+    constructor(config: WhatsAppCloudConfig) {
+        this.config = config;
     }
 
     public async connect(config: XoxaConfig): Promise<void> {
         this.state = "connecting";
-        this.http = new HttpClient(config.timeoutMs ?? 15000);
+        this.api = new MetaApi({
+            timeout: config.timeoutMs ?? 15000,
+            ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
+        });
         this.state = "connected";
     }
 
@@ -43,60 +55,64 @@ export class WhatsAppTransport implements Transport {
         return this.state;
     }
 
-    public async send(message: OutboundMessage, cfg: RequiredTransportConfig): Promise<DeliveryReceipt> {
+    public async send(message: OutboundMessage, config: RequiredTransportConfig): Promise<DeliveryReceipt> {
         if (this.state !== "connected") throw new Error("WhatsAppTransport not connected");
-
-        const urlBase = this.cfg.baseUrl ?? "https://graph.facebook.com/v19.0";
-        const url = `${urlBase}/${this.cfg.phoneNumberId}/messages`;
-
-        const headers = {
-            ...cfg.headers,
-            Authorization: `Bearer ${this.cfg.accessToken}`,
-        };
-
-        const payload = this.buildWhatsAppPayload(message);
-        const res = await this.http.postJson<WaResp>(url, payload, headers);
-        const id = res.messages?.[0]?.id ?? `wa_${Date.now()}`;
-
+        const waMsg = message as WhatsAppOutboundMessage;
+        const payload = this.buildWhatsAppPayload(waMsg);
+        const resp = await this.api.sendWhatsappMessage(this.config.phoneNumberId, this.config.accessToken, payload, config.headers);
+        const data = resp.data;
+        const id = data.messages?.[0]?.id ?? `wa_${Date.now()}`;
         return {
             channel: "whatsapp",
             messageId: id,
             providerMessageId: id,
             status: "queued",
-            timestamp: new Date().toISOString() as ISODateString,
-            raw: res,
+            timestamp: new Date().toISOString(),
+            raw: data,
         };
     }
 
-    private buildWhatsAppPayload(msg: OutboundMessage) {
-        if (msg.media?.length) {
-            const m = msg.media[0];
-            let type: string;
-            if (m.kind === "image") {
-                type = "image";
-            } else if (m.kind === "audio") {
-                type = "audio";
-            } else if (m.kind === "video") {
-                type = "video";
-            } else {
-                type = "document";
-            }
+    private buildWhatsAppPayload(msg: WhatsAppOutboundMessage): WhatsAppRequestDto {
+        // Media
+        if ("media" in msg && msg.media && msg.media.length > 0) {
+            const m: WhatsAppMediaMessage["media"][0] = msg.media[0];
+            const type = m.kind; // "image" | "audio" | "video" | "document"
+            const mediaObj: Record<string, unknown> = { link: m.url };
+            if (m.caption || msg.body) mediaObj.caption = m.caption ?? msg.body;
+            if (m.filename) mediaObj.filename = m.filename;
+
             return {
                 messaging_product: "whatsapp",
                 to: msg.to.replace(/\D/g, ""),
                 type,
-                [type]: {
-                    link: m.url,
-                    caption: m.caption ?? msg.body,
-                    filename: m.filename,
+                [type]: mediaObj, // matches DTO key (image/audio/video/document)
+            } as WhatsAppRequestDto;
+        }
+
+        // Template
+        if ("templateName" in msg) {
+            return {
+                messaging_product: "whatsapp",
+                to: msg.to.replace(/\D/g, ""),
+                type: "template",
+                template: {
+                    name: msg.templateName,
+                    language: { code: msg.languageCode ?? "en_US" },
+                    ...(msg.components ? { components: msg.components } : {}),
                 },
             };
         }
+
+        // Text
+        const x = msg as WhatsAppTextMessage;
         return {
             messaging_product: "whatsapp",
-            to: msg.to.replace(/\D/g, ""),
+            to: x.to.replace(/\D/g, ""),
             type: "text",
-            text: { body: msg.body ?? "" },
+            text: {
+                body: x.body,
+                ...(x.previewUrl !== undefined ? { preview_url: x.previewUrl } : {}),
+            },
         };
     }
 }
