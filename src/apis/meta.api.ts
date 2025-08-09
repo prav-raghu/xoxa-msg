@@ -16,7 +16,8 @@ export class MetaApi extends BaseApi {
         const response = await this.post<WhatsAppRequestDto, WhatsAppResponseDto>(
             `${phoneNumberId}/messages?access_token=${accessToken}`,
             model,
-            { headers },
+            undefined,
+            headers,
         );
         return response;
     }

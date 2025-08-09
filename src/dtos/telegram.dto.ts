@@ -1,8 +1,8 @@
 import { MediaKind } from "../types/global.type";
 
 export interface TelegramRequestDto {
-    media: MediaAttachment[];
-    to: string;
+    media?: MediaAttachment[];
+    to:string;
     body: string;
 }
 
@@ -14,4 +14,8 @@ export interface MediaAttachment {
     mimeType?: string;
 }
 
-export interface TelegramResponseDto {}
+export interface TelegramResponseDto {
+    ok(ok: any): unknown;
+    result: any;
+    description: string;
+}

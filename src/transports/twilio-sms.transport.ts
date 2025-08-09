@@ -11,7 +11,6 @@ import type {
 import type { Transport } from "../interfaces/transport.interface";
 import type { TwilioRequestDto, TwilioResponseDto } from "../dtos/twilio.dto";
 import { Twilio } from "../apis/twilio.api";
-import { Buffer } from "buffer";
 
 export class TwilioSmsTransport implements Transport {
     public readonly channel = "sms" as const;

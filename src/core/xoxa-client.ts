@@ -13,7 +13,7 @@ import type { Transport } from "../interfaces/transport.interface";
 import type { Logger } from "../interfaces/logger.interface";
 import { noopLogger } from "../utilities/logger";
 import { Validator } from "../utilities/validation.utility";
-import { BackOffStrategy } from "./back-off-strategy";
+import { BackOffStrategy } from "../strategies/back-off-strategy";
 import { TypedEvents } from "../events/typed-events";
 import { DEFAULTS } from "../configs/constants";
 

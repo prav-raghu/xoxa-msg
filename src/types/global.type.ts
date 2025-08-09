@@ -29,6 +29,12 @@ export interface TwilioSmsConfig {
     from?: string;
 }
 
+export interface TelegramConfig {
+    botUsername?: string;
+    botToken: string;
+    baseUrl?: string;
+}
+
 export interface RequiredTransportConfig {
     baseUrl?: string;
     timeoutMs: number;
@@ -36,17 +42,12 @@ export interface RequiredTransportConfig {
     userAgent: string;
 }
 
-export interface TelegramConfig {
-    botToken: string;
-    baseUrl?: string;
-}
-
 export interface MediaAttachment {
     kind: MediaKind;
-    url: string; // remote media URL
-    filename?: string; // provider-dependent
-    caption?: string; // optional text
-    mimeType?: string; // strongly recommended for docs/video/audio
+    url: string;
+    filename?: string;
+    caption?: string;
+    mimeType?: string;
 }
 
 export interface WhatsAppTextMessage extends OutboundMessage {
@@ -69,17 +70,11 @@ export interface WhatsAppTemplateMessage extends OutboundMessage {
 
 export interface WhatsAppMediaMessage extends OutboundMessage {
     channel: "whatsapp";
-    media: MediaAttachment[]; // 1..n
+    media: MediaAttachment[];
 }
 
-/**
- * Union of all possible WhatsApp outbound messages
- */
 export type WhatsAppOutboundMessage = WhatsAppTextMessage | WhatsAppTemplateMessage | WhatsAppMediaMessage;
 
-/**
- * Generic outbound message union for all channels
- */
 export type BaseOutboundMessage =
     | WhatsAppOutboundMessage
     | (OutboundMessage & { channel: "sms"; body: string })
@@ -106,7 +101,7 @@ export interface DeliveryReceipt {
     detail?: string;
     timestamp: string;
     providerMessageId?: string;
-    raw?: unknown; // provider raw payload (typed by transport)
+    raw?: unknown;
 }
 
 export interface SendOptions {
@@ -114,9 +109,6 @@ export interface SendOptions {
     retries?: number;
 }
 
-/**
- * WhatsApp API payload shape
- */
 export type WhatsAppPayload =
     | {
           messaging_product: "whatsapp";

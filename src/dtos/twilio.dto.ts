@@ -1,6 +1,6 @@
 export interface TwilioRequestDto {
     from: string;
-    to: string;
+    to:string;
     body: string;
     media: Array<{ url: string }> | undefined;
 }
